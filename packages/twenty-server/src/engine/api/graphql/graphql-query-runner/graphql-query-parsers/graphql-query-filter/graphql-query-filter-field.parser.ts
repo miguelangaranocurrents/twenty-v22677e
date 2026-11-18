@@ -69,6 +69,7 @@ export class GraphqlQueryFilterFieldParser {
     filterValue: any,
     isFirst = false,
     useDirectTableReference = false,
+    isNegated = false,
   ): void {
     const { fieldMetadata, isReferencedByFieldName } =
       resolveFilterKeyFieldMetadata({
@@ -151,10 +152,18 @@ export class GraphqlQueryFilterFieldParser {
       useDirectTableReference,
     });
 
+    const fieldReference = useDirectTableReference
+      ? `"${key}"`
+      : `"${objectNameSingular}"."${key}"`;
+
+    const negatedSql = `(NOT (${sql}) OR ${fieldReference} IS NULL)`;
+
+    const finalSql = isNegated ? negatedSql : sql;
+
     if (isFirst) {
-      queryBuilder.where(sql, params);
+      queryBuilder.where(finalSql, params);
     } else {
-      queryBuilder.andWhere(sql, params);
+      queryBuilder.andWhere(finalSql, params);
     }
   }
 
@@ -339,9 +348,9 @@ export class GraphqlQueryFilterFieldParser {
 
       if (isFirst && index === 0) {
         queryBuilder.where(sql, params);
+      } else {
+        queryBuilder.andWhere(sql, params);
       }
-
-      queryBuilder.andWhere(sql, params);
     });
   }
 }
